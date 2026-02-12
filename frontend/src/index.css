@@ -1,0 +1,98 @@
+@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+a.active hr {
+    display: block;
+}
+
+*{
+    font-family: Outfit;
+}
+
+.prata-regular {
+    font-family: "Prata", serif;
+}
+
+@media(max-width:640px){
+    a.active{
+        background-color: black;
+        color: white;
+    }
+}
+
+::-webkit-scrollbar{
+    display: none;
+}
+
+/* Product Page Alignment Fixes */
+.border-t-2.pt-10 {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+/* Fix main product container to use grid instead of relying on broken flex */
+/* Only target the first child div (product details section), not RelatedProducts */
+.border-t-2.pt-10 > div:first-child {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: start;
+}
+
+/* Ensure product images section takes full width in its column */
+.border-t-2.pt-10 > div:first-child > div:first-child {
+    grid-column: 1;
+}
+
+/* Product info section alignment */
+.border-t-2.pt-10 > div:first-child + div {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+/* Button and additional info positioning */
+.border-t-2.pt-10 > div:first-child + div + button,
+.border-t-2.pt-10 > div:first-child + div + button + hr,
+.border-t-2.pt-10 > div:first-child + div + button + hr + div {
+    grid-column: 2;
+}
+
+/* Image gallery thumbnail container */
+.flex.flex-col.overflow-x-auto {
+    max-width: 120px;
+    gap: 0.75rem;
+}
+
+/* Main product image container */
+.flex-1.flex.flex-col-reverse > div:last-child {
+    flex: 1;
+}
+
+/* Size selection buttons layout - horizontal */
+.flex.flex-col.gap-4.my-8 > button {
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .border-t-2.pt-10 > div:first-child {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .border-t-2.pt-10 > div:first-child > div:first-child,
+    .border-t-2.pt-10 > div:first-child + div,
+    .border-t-2.pt-10 > div:first-child + div + button,
+    .border-t-2.pt-10 > div:first-child + div + button + hr,
+    .border-t-2.pt-10 > div:first-child + div + button + hr + div {
+        grid-column: 1;
+        grid-row: auto;
+    }
+}
+ 
