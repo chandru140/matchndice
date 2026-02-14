@@ -3,22 +3,22 @@ import { assets } from '../assets/frontend_assets/assets'
 
 const Footer = () => {
   return (
-    <div>
+    <div className='bg-black text-white px-4 sm:px-[5vw] md:px-[7vw] lg:px-[9vw] w-full pt-10 mt-20'>
 
-      <div className="grid grid-cols-1 sm:grid-cols-[3fr_1fr_1fr] gap-14 my-10 mt-20 text-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-[3fr_1fr_1fr] gap-14 my-10 text-sm">
 
         {/* Logo & Description */}
         <div>
-          <img src={assets.logo} className="mb-5 w-32" alt="logo" />
-          <p className="w-full md:w-2/3 text-gray-600">
-            This is the dummy text according to the website. It will be changed.
+          <img src={assets.match} className="mb-5 w-32 rounded-full" alt="logo" />
+          <p className="w-full md:w-2/3 text-gray-400">
+            Match n Dice is a one-stop destination for all your gaming needs. From board games to card games, we have it all.
           </p>
         </div>
 
         {/* Company Links */}
         <div>
           <p className="text-xl font-medium mb-5">COMPANY</p>
-          <ul className="flex flex-col gap-1 text-gray-600">
+          <ul className="flex flex-col gap-1 text-gray-400">
             <li>Home</li>
             <li>About us</li>
             <li>Delivery</li>
@@ -29,17 +29,17 @@ const Footer = () => {
         {/* Contact */}
         <div>
           <p className="text-xl font-medium mb-5">GET IN TOUCH</p>
-          <ul className="flex flex-col gap-1 text-gray-600">
-            <li>+91 1234567890</li>
-            <li>chandrugoundero@gmail.com</li>
+          <ul className="flex flex-col gap-1 text-gray-400">
+            <li>+91 828282828</li>
+            <li>yashram@gmail.com</li>
           </ul>
         </div>
 
       </div>
 
       <div>
-        <hr />
-        <p className="py-5 text-sm text-center">
+        <hr className='border-gray-800'/>
+        <p className="py-5 text-sm text-center text-gray-500">
           © 2026 Match n Dice.com — All Rights Reserved
         </p>
       </div>

@@ -5,14 +5,12 @@ import { ShopContext } from "../context/ShopContext.jsx";
 
 const Navbar = () => {
   const [visible, setVisible] = useState(false);
-  const {setShowSearch , getCartCount , navigate , token , setToken , setCartItems } = useContext(ShopContext)
+  const {setShowSearch, navigate, token, setToken } = useContext(ShopContext)
 
   const logout = () => {
     navigate('/login');
     localStorage.removeItem('token');
     setToken('');
-    setCartItems({});
-
   }
 
   return (
@@ -23,25 +21,25 @@ const Navbar = () => {
         </Link>
         
 
-        <ul className="hidden sm:flex gap-5 text-sm text-gray-700">
+        <ul className="hidden sm:flex gap-5 text-sm text-black font-medium">
           <NavLink to="/" className="flex flex-col items-center gap-1">
             <p>HOME</p>
-            <hr className="w-2/4 border-none h-[1.5px] bg-gray-700 hidden" />
+            <hr className="w-2/4 border-none h-[1.5px] bg-black hidden" />
           </NavLink>
 
           <NavLink to="/collection" className="flex flex-col items-center gap-1">
             <p>COLLECTION</p>
-            <hr className="w-2/4 border-none h-[1.5px] bg-gray-700 hidden" />
+            <hr className="w-2/4 border-none h-[1.5px] bg-black hidden" />
           </NavLink>
 
           <NavLink to="/about" className="flex flex-col items-center gap-1">
             <p>ABOUT</p>
-            <hr className="w-2/4 border-none h-[1.5px] bg-gray-700 hidden" />
+            <hr className="w-2/4 border-none h-[1.5px] bg-black hidden" />
           </NavLink>
 
           <NavLink to="/contact" className="flex flex-col items-center gap-1">
             <p>CONTACT</p>
-            <hr className="w-2/4 border-none h-[1.5px] bg-gray-700 hidden" />
+            <hr className="w-2/4 border-none h-[1.5px] bg-black hidden" />
           </NavLink>
         </ul>
 
@@ -52,23 +50,20 @@ const Navbar = () => {
             <img onClick={()=> token ? null : navigate('/login')} className="w-5 cursor-pointer" src={assets.profile_icon} alt="profile" />
 
             {token && 
-                 <div className="hidden group-hover:block absolute right-0 pt-4">
-              <div className="flex flex-col gap-2 w-36 py-3 px-5 bg-slate-100 text-gray-500 rounded">
-                <p onClick={()=>navigate('/profile')} className="cursor-pointer hover:text-black">My Profile</p>
-                <p onClick={()=>navigate('/orders')} className="cursor-pointer hover:text-black">Orders</p>
-                <p onClick={logout} className="cursor-pointer hover:text-black">Logout</p>
+                 <div className="hidden group-hover:block absolute right-0 pt-4 z-50">
+              <div className="flex flex-col gap-2 w-36 py-3 px-5 bg-black text-white rounded">
+                <p onClick={()=>navigate('/profile')} className="cursor-pointer hover:text-gray-400">My Profile</p>
+                <p onClick={()=>navigate('/orders')} className="cursor-pointer hover:text-gray-400">Orders</p>
+                <p onClick={logout} className="cursor-pointer hover:text-gray-400">Logout</p>
               </div>
             </div>
             }
 
           </div>
 
-          <NavLink to="/cart" className="relative">
-            <img src={assets.cart_icon} className="w-5" alt="cart" />
-            <p className="absolute -right-1 -bottom-1 h-4 w-4 flex items-center justify-center bg-black text-white rounded-full text-[8px]">
-              {getCartCount()}
-            </p>
-          </NavLink>
+          <Link to='/cart' className='relative'>
+            <img src={assets.cart_icon} className='w-5 min-w-5' alt="" />
+          </Link>
 
           {/* Mobile menu button (visible only on small screens) */}
           <img

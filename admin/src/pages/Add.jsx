@@ -15,10 +15,80 @@ const Add = ({token}) => {
   const [name , setName] = useState("")
   const [description , setDescription] = useState("")
   const [price , setPrice] = useState("")
-  const [category , setCategory] = useState("Men")
-  const [subCategory , setSubCategory] = useState("Topwear")
+  const [category , setCategory] = useState("")
+  const [subCategory , setSubCategory] = useState("")
   const [bestseller , setBestseller] = useState(false)
   const [sizes , setSizes] = useState([])
+  
+  const [categories, setCategories] = useState([])
+  const [subCategories, setSubCategories] = useState([])
+
+  const fetchCategories = async () => {
+      try {
+          const response = await axios.get(backendUrl + '/api/category/list')
+          if (response.data.success) {
+              setCategories(response.data.categories)
+              if(response.data.categories.length > 0) {
+                  setCategory(response.data.categories[0]._id)
+              }
+          }
+      } catch (error) {
+          toast.error(error.message)
+      }
+  }
+
+  const fetchSubCategories = async (catId) => {
+      try {
+          if(!catId) return;
+          const response = await axios.get(backendUrl + '/api/subcategory/list/' + catId)
+          if (response.data.success) {
+              setSubCategories(response.data.subCategories)
+              if(response.data.subCategories.length > 0) {
+                  setSubCategory(response.data.subCategories[0]._id)
+              } else {
+                  setSubCategory("")
+              }
+          }
+      } catch (error) {
+          toast.error(error.message)
+      }
+  }
+
+  useEffect(() => {
+      fetchCategories()
+  }, [])
+
+  useEffect(() => {
+      if(category) {
+          fetchSubCategories(category)
+      }
+  }, [category])
+  
+  // Customization states
+  const [isCustomizable, setIsCustomizable] = useState(false)
+  const [customizationFields, setCustomizationFields] = useState([])
+
+  const addCustomizationField = () => {
+    setCustomizationFields([...customizationFields, {
+      name: '',
+      label: '',
+      type: 'text',
+      options: [],
+      priceModifier: 0,
+      maxLength: 50
+    }])
+  }
+
+  const removeCustomizationField = (index) => {
+    const newFields = customizationFields.filter((_, i) => i !== index)
+    setCustomizationFields(newFields)
+  }
+
+  const updateCustomizationField = (index, field, value) => {
+    const newFields = [...customizationFields]
+    newFields[index][field] = value
+    setCustomizationFields(newFields)
+  }
 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
@@ -35,6 +105,8 @@ const Add = ({token}) => {
     formData.append('subCategory' , subCategory)
     formData.append('bestseller' , bestseller)
     formData.append('sizes' , JSON.stringify(sizes))
+    formData.append('isCustomizable', isCustomizable)
+    formData.append('customizationFields', JSON.stringify(customizationFields))
 
     try{
       const response = await axios.post(backendUrl + '/api/product/add' , formData , {headers:{token}})
@@ -48,6 +120,9 @@ const Add = ({token}) => {
         setImage2(false)
         setImage3(false)
         setImage4(false)
+        setSizes([])
+        setIsCustomizable(false)
+        setCustomizationFields([])
       }
       else{
         toast.error(response.data.message)
@@ -99,20 +174,20 @@ const Add = ({token}) => {
       <div className='flex flex-col sm:flex-row gap-2 w-full sm:gap-8'>
         <div>
           <p className='mb-2'>Product Category</p>
-          <select onChange={(e) => setCategory(e.target.value)} className='w-full px-3 py-2' >
-            <option value="Men">Men</option>
-            <option value="Women">Women</option>
-            <option value="Kids">Kids</option>
+          <select onChange={(e) => setCategory(e.target.value)} value={category} className='w-full px-3 py-2' >
+            {categories.map(cat => (
+                <option key={cat._id} value={cat._id}>{cat.name}</option>
+            ))}
           </select>
         </div>
 
          <div>
         <div>
           <p className='mb-2'>Sub Category</p>
-          <select onChange={(e) => setSubCategory(e.target.value)} className='w-full px-3 py-2'>
-            <option value="TopWear">TopWear</option>
-            <option value="BottomWear">BottomWear</option>
-            <option value="WinterWear">WinterWear</option>
+          <select onChange={(e) => setSubCategory(e.target.value)} value={subCategory} className='w-full px-3 py-2'>
+            {subCategories.map(sub => (
+                <option key={sub._id} value={sub._id}>{sub.name}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -151,6 +226,126 @@ const Add = ({token}) => {
     <div className='flex gap-2 mt-2 '>
       <input onChange={() => setBestseller(prev => !prev)} checked={bestseller} type="checkbox" id='bestseller'/>
       <label className='cursor-pointer ' htmlFor="bestseller">Add to bestseller</label>
+    </div>
+
+    {/* Customization Section */}
+    <div className='w-full border-t pt-4 mt-4'>
+      <div className='flex gap-2 items-center mb-3'>
+        <input 
+          onChange={() => setIsCustomizable(prev => !prev)} 
+          checked={isCustomizable} 
+          type="checkbox" 
+          id='isCustomizable'
+        />
+        <label className='cursor-pointer font-medium' htmlFor="isCustomizable">
+          Make this product customizable
+        </label>
+      </div>
+
+      {isCustomizable && (
+        <div className='bg-gray-50 p-4 rounded-md'>
+          <p className='font-medium mb-3'>Customization Options</p>
+          
+          {customizationFields.map((field, index) => (
+            <div key={index} className='border bg-white p-3 mb-3 rounded'>
+              <div className='flex justify-between items-center mb-2'>
+                <p className='font-medium text-sm'>Field #{index + 1}</p>
+                <button 
+                  type="button"
+                  onClick={() => removeCustomizationField(index)}
+                  className='text-red-500 text-sm'
+                >
+                  Remove
+                </button>
+              </div>
+
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-2'>
+                <div>
+                  <label className='text-xs text-gray-600'>Field Name (identifier)</label>
+                  <input
+                    type="text"
+                    value={field.name}
+                    onChange={(e) => updateCustomizationField(index, 'name', e.target.value)}
+                    placeholder="e.g., color, text"
+                    className='w-full px-2 py-1 border rounded text-sm'
+                  />
+                </div>
+
+                <div>
+                  <label className='text-xs text-gray-600'>Label (display name)</label>
+                  <input
+                    type="text"
+                    value={field.label}
+                    onChange={(e) => updateCustomizationField(index, 'label', e.target.value)}
+                    placeholder="e.g., Choose Color"
+                    className='w-full px-2 py-1 border rounded text-sm'
+                  />
+                </div>
+
+                <div>
+                  <label className='text-xs text-gray-600'>Input Type</label>
+                  <select
+                    value={field.type}
+                    onChange={(e) => updateCustomizationField(index, 'type', e.target.value)}
+                    className='w-full px-2 py-1 border rounded text-sm'
+                  >
+                    <option value="text">Text</option>
+                    <option value="dropdown">Dropdown</option>
+                    <option value="textarea">Textarea</option>
+                    <option value="radio">Radio</option>
+                    <option value="number">Number</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className='text-xs text-gray-600'>Price Modifier (₹)</label>
+                  <input
+                    type="number"
+                    value={field.priceModifier}
+                    onChange={(e) => updateCustomizationField(index, 'priceModifier', Number(e.target.value))}
+                    placeholder="0"
+                    className='w-full px-2 py-1 border rounded text-sm'
+                  />
+                </div>
+
+                {(field.type === 'dropdown' || field.type === 'radio') && (
+                  <div className='col-span-2'>
+                    <label className='text-xs text-gray-600'>Options (comma separated)</label>
+                    <input
+                      type="text"
+                      value={field.options.join(', ')}
+                      onChange={(e) => updateCustomizationField(index, 'options', e.target.value.split(',').map(s => s.trim()))}
+                      placeholder="Black, White, Red"
+                      className='w-full px-2 py-1 border rounded text-sm'
+                    />
+                  </div>
+                )}
+
+                {(field.type === 'text' || field.type === 'textarea') && (
+                  <div>
+                    <label className='text-xs text-gray-600'>Max Length</label>
+                    <input
+                      type="number"
+                      value={field.maxLength}
+                      onChange={(e) => updateCustomizationField(index, 'maxLength', Number(e.target.value))}
+                      placeholder="50"
+                      className='w-full px-2 py-1 border rounded text-sm'
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+
+          <button 
+            type="button"
+            onClick={addCustomizationField}
+            className='bg-blue-500 text-white px-4 py-2 text-sm rounded'
+          >
+            + Add Customization Field
+          </button>
+        </div>
+      )}
     </div>
 
     <button type='submit' className='w-28 py-3 mt-4 bg-black text-white '>

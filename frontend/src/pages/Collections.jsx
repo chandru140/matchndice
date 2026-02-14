@@ -6,7 +6,7 @@ import Title from '../components/Title'
 
 const Collections = () => {
 
-  const { products, search, showSearch } = useContext(ShopContext)
+  const { products, search, showSearch, categories, subCategories } = useContext(ShopContext)
 
   const [showFilter, setShowFilter] = useState(false)
   const [filterProducts, setFilterProducts] = useState([])
@@ -97,15 +97,15 @@ const Collections = () => {
         } sm:block`}>
           <p className="mb-2 font-medium">Categories</p>
 
-          {['Men', 'Women', 'Kids'].map(item => (
-            <label key={item} className="flex gap-2 text-sm text-gray-700">
+          {categories.map(item => (
+            <label key={item._id} className="flex gap-2 text-sm text-gray-700">
               <input
                 type="checkbox"
-                value={item}
+                value={item._id}
                 className="w-3"
                 onChange={toggleCategory}
               />
-              {item}
+              {item.name}
             </label>
           ))}
         </div>
@@ -116,15 +116,15 @@ const Collections = () => {
         } sm:block`}>
           <p className="mb-2 font-medium">Types</p>
 
-          {['Topwear', 'Bottomwear', 'Winterwear'].map(item => (
-            <label key={item} className="flex gap-2 text-sm text-gray-700">
+          {subCategories.map(item => (
+            <label key={item._id} className="flex gap-2 text-sm text-gray-700">
               <input
                 type="checkbox"
-                value={item}
+                value={item._id}
                 className="w-3"
                 onChange={toggleSubCategory}
               />
-              {item}
+              {item.name}
             </label>
           ))}
         </div>

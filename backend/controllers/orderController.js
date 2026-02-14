@@ -15,13 +15,14 @@ const razorpayInstance = new Razorpay({
 })
 
 //placing orders using cod 
-const placeOrder = async (req, res) => {
+const placeOrder = async (req, res, next) => {
     try {
         console.log("Received order data:", req.body)
         const { userId, items, amount, address, paymentMethod } = req.body
         
         if (!amount) {
-            return res.status(400).json({ success: false, message: "Amount is required" })
+            res.status(400);
+            throw new Error("Amount is required");
         }
         
         const order = new orderModel({
@@ -40,15 +41,12 @@ const placeOrder = async (req, res) => {
 
         res.status(200).json({ success: true, message: "Order Placed", order })
     } catch (error) {
-
-        console.log(error)
-        res.status(500).json({ success: false, message: error.message })
-
+        next(error);
     }
 }
 
 //placing order using stripe method 
-const placeOrderStripe = async (req, res) => {
+const placeOrderStripe = async (req, res, next) => {
     try {
         const { userId, items, amount, address } = req.body
         const {origin} = req.headers
@@ -99,13 +97,12 @@ const placeOrderStripe = async (req, res) => {
         res.json({ success: true, session_url:session.url })
        
     } catch (error) {
-        console.log(error)
-        res.status(500).json({ success: false, message: error.message })
+        next(error);
     }
 }
 
 //verify stripe 
-const verifyStripe = async (req, res) => {
+const verifyStripe = async (req, res, next) => {
     try {
         const {success, orderId , userId} = req.query
         if(success === 'true'){
@@ -117,13 +114,12 @@ const verifyStripe = async (req, res) => {
             res.json({success: false})
         }
     } catch (error) {
-        console.log(error)
-        res.status(500).json({ success: false, message: error.message })
+        next(error);
     }
 }
 
 //placing order using razorpay method 
-const placeOrderRazorpay = async (req, res) => {
+const placeOrderRazorpay = async (req, res, next) => {
     try {
         const { userId, items, amount, address } = req.body
         const order = new orderModel({
@@ -151,13 +147,12 @@ const placeOrderRazorpay = async (req, res) => {
             }
         })
     } catch (error) {
-        console.log(error)
-        res.status(500).json({ success: false, message: error.message })
+        next(error);
     }
 }
 
 //verify Razorpay 
-const verifyRazorpay = async (req,res) => {
+const verifyRazorpay = async (req,res, next) => {
     try {
         const {razorpay_order_id} = req.body
         
@@ -173,24 +168,22 @@ const verifyRazorpay = async (req,res) => {
         }
         
     }catch(error){
-        console.log(error)
-        res.status(500).json({ success: false, message: error.message })
+        next(error);
     }
 }
 
 //All order data for admin panel 
-const allOrders = async (req, res) => {
+const allOrders = async (req, res, next) => {
     try {
         const orders = await orderModel.find({}).sort({ date: -1 })
         res.status(200).json({ success: true, orders })
     } catch (error) {
-        console.log(error)
-        res.status(500).json({ success: false, message: error.message })
+        next(error);
     }
 }
 
 //user order data for frontend 
-const userOrders = async (req, res) => {
+const userOrders = async (req, res, next) => {
     try {
 
         const { userId } = req.body
@@ -198,22 +191,18 @@ const userOrders = async (req, res) => {
         res.status(200).json({ success: true, orders })
 
     } catch (error) {
-
-        console.log(error)
-        res.status(500).json({ success: false, message: error.message })
-    
+        next(error);
     }
 }
 
 // update order status from admin panel 
-const updateStatus = async (req, res) => {
+const updateStatus = async (req, res, next) => {
     try {
         const { orderId, status } = req.body
         await orderModel.findByIdAndUpdate(orderId, { status })
         res.status(200).json({ success: true, message: "Status Updated" })
     } catch (error) {
-        console.log(error)
-        res.status(500).json({ success: false, message: error.message })
+        next(error);
     }
 }
 

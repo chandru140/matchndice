@@ -62,7 +62,7 @@ const List = ({token}) => {
             <div key={index} className='grid grid-cols-[1fr_3fr_1fr] grid-cols-[1fr_3fr_1fr_1fr_1fr] items-center py-1 px-2 border bg-gray-100 text-sm'>
               <img className='w-12 h-12 object-cover' src={item.image[0]} alt="" />
               <p>{item.name}</p>
-              <p>{item.category}</p>
+              <p>{item.category?.name || item.category}</p>
               <p>{currency}{item.price}</p>
               <p onClick={()=>removeProduct(item._id)} className='text-right md:text-center cursor-pointer text-lg'>X</p> 
             </div>

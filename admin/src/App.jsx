@@ -4,7 +4,10 @@ import SideBar from './components/SideBar.jsx'
 import {Routes , Route } from 'react-router-dom'
 import Add from './pages/Add.jsx'
 import List from './pages/List.jsx'
-import Orders from './pages/Orders.jsx'
+import AddCategory from './pages/AddCategory.jsx'
+import ListCategory from './pages/ListCategory.jsx'
+import AddSubCategory from './pages/AddSubCategory.jsx'
+import ListSubCategory from './pages/ListSubCategory.jsx'
 import Login from './components/Login.jsx'
 import {ToastContainer} from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css';
@@ -35,7 +38,10 @@ const App = () => {
               <Routes>
                 <Route path='/add' element={<Add token={token}/>}/>
                 <Route path='/list' element={<List token={token}/>}/>
-                <Route path='/orders' element={<Orders token={token}/>}/>
+                <Route path='/add-category' element={<AddCategory token={token}/>}/>
+                <Route path='/list-category' element={<ListCategory token={token}/>}/>
+                <Route path='/add-subcategory' element={<AddSubCategory token={token}/>}/>
+                <Route path='/list-subcategory' element={<ListSubCategory token={token}/>}/>
               </Routes>
             </div>
           </div>

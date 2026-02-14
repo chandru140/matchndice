@@ -8,6 +8,15 @@ const orderSchema = new mongoose.Schema({
     items: {
         type: Array,
         required: true
+        // items structure:
+        // [{
+        //   _id: String (product ID),
+        //   name: String,
+        //   size: String,
+        //   quantity: Number,
+        //   price: Number (including customization price),
+        //   customization: Object (optional, e.g., {color: "Black", text: "John"})
+        // }]
     },
     amount: {
         type: Number,
