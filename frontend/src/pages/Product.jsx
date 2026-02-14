@@ -167,11 +167,10 @@ const Product = () => {
   const handleWhatsAppRedirect = () => {
     if (!productData) return;
 
-    const phoneNumber = "919999999999"; // TODO: Replace with actual number
+    const phoneNumber = "919004140139"; 
     let message = `Hello, I want to customize this product:\n\n`;
     message += `*Product Name*: ${productData.name}\n`;
     message += `*Price*: Starting from ${currency}${productData.price}\n`;
-    message += `*Product ID*: ${productData._id}\n`;
     
     if (size) {
         message += `*Selected Size*: ${size}\n`;
