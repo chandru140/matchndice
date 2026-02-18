@@ -26,17 +26,26 @@ app.use(helmet());
 
 // CORS configuration - whitelist frontend domains
 const allowedOrigins = process.env.CORS_ORIGIN 
-    ? process.env.CORS_ORIGIN.split(',') 
-    : ['http://localhost:5173', 'http://localhost:5174'];
+    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+    : [
+        'http://localhost:5173', 
+        'http://localhost:5174',
+        'https://matchndice.vercel.app',
+        'https://matchndiceadmin.vercel.app'
+      ];
 
 app.use(cors({
     origin: function(origin, callback) {
-        // Allow requests with no origin (mobile apps, Postman, etc.)
+        // Allow requests with no origin (mobile apps, Postman, curl, etc.)
         if (!origin) return callback(null, true);
         
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        // Allow any vercel.app subdomain in production
+        if (origin.endsWith('.vercel.app')) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
+            console.log('CORS blocked origin:', origin);
             callback(new Error('Not allowed by CORS'));
         }
     },
