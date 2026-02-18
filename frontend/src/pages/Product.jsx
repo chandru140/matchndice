@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { ShopContext } from '../context/ShopContext'
 import { assets } from '../assets/frontend_assets/assets'
 import RelatedProducts from '../components/RelatedProducts'
+import { generateWhatsAppLink, redirectToWhatsApp } from '../utils/whatsapp'
 
 const Product = () => {
 
@@ -10,7 +11,6 @@ const Product = () => {
   const { products, currency } = useContext(ShopContext)
   const [productData, setProductData] = useState(null)
   const [image, setImage] = useState('')
-  const [size, setSize] = useState('')
   const [customization, setCustomization] = useState({})
   const [customizationPrice, setCustomizationPrice] = useState(0)
   
@@ -166,29 +166,8 @@ const Product = () => {
 
   const handleWhatsAppRedirect = () => {
     if (!productData) return;
-
-    const phoneNumber = "919004140139"; 
-    let message = `Hello, I want to customize this product:\n\n`;
-    message += `*Product Name*: ${productData.name}\n`;
-    message += `*Price*: Starting from ${currency}${productData.price}\n`;
-    
-    if (size) {
-        message += `*Selected Size*: ${size}\n`;
-    }
-
-    if (customizationPrice > 0) {
-        message += `*Estimated Total Price*: ${currency}${productData.price + customizationPrice}\n`;
-    }
-
-    if (Object.keys(customization).length > 0) {
-        message += `\n*Customization Details*:\n`;
-        for (const [key, value] of Object.entries(customization)) {
-            message += `- ${key}: ${value}\n`;
-        }
-    }
-
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_blank');
+    const link = generateWhatsAppLink(productData, currency, null, customization, customizationPrice);
+    redirectToWhatsApp(link);
   }
 
   return (
@@ -243,27 +222,7 @@ const Product = () => {
             {productData.description}
           </p>
 
-          {/* Sizes */}
-          {productData.sizes && productData.sizes.length > 0 && (
-          <div className="mt-6">
-            <p className="mb-3 font-medium">Select Size</p>
-            <div className="flex gap-3 flex-wrap">
-              {productData.sizes.map((item, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSize(item)}
-                  className={`border px-4 py-2 transition-all duration-300 ${
-                    size === item ? 'border-black bg-black text-white' : 'border-gray-300 bg-white hover:bg-gray-100'
-                  }`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
-          )}
-
-          {/* Customization Section - NEW */}
+          {/* Customization Section */}
           {productData.isCustomizable && productData.customizationFields && productData.customizationFields.length > 0 && (
             <div className="mt-6">
               <p className="mb-3 font-medium text-lg">Customize Your Product</p>

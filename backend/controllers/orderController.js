@@ -1,5 +1,6 @@
 import orderModel from "../models/orderModel.js";
 import userModel from "../models/userModel.js";
+import productModel from "../models/productModel.js";
 import Stripe from "stripe";
 import Razorpay from "razorpay";
 
@@ -23,6 +24,27 @@ const placeOrder = async (req, res, next) => {
         if (!amount) {
             res.status(400);
             throw new Error("Amount is required");
+        }
+
+        // Check stock availability for all items
+        for (const item of items) {
+            const product = await productModel.findById(item._id);
+            if (!product) {
+                res.status(400);
+                throw new Error(`Product ${item.name} not found`);
+            }
+            if (product.stock < item.quantity) {
+                res.status(400);
+                throw new Error(`Insufficient stock for ${item.name}. Available: ${product.stock}, Requested: ${item.quantity}`);
+            }
+        }
+
+        // Deduct stock for all items
+        for (const item of items) {
+            await productModel.findByIdAndUpdate(
+                item._id,
+                { $inc: { stock: -item.quantity } }
+            );
         }
         
         const order = new orderModel({
@@ -139,7 +161,6 @@ const placeOrderRazorpay = async (req, res, next) => {
         }
         await razorpayInstance.orders.create(options , (error , order) => {
             if(error){
-                console.log(error)
                 return res.json({success:false , message:"Error"})
             }
             else{

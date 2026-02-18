@@ -4,14 +4,14 @@ import productModel from "../models/productModel.js"
 // function for add product 
 const addProduct = async (req,res, next) => {
     try {
-        const {name , description , price , category , subCategory , bestseller, isCustomizable} = req.body
+        const {name , description , price , category , subCategory , bestseller, isCustomizable, stock} = req.body
         
         let customizationFields = [];
         if(req.body.customizationFields){
             try{
                 customizationFields = JSON.parse(req.body.customizationFields);
             } catch(e){
-                console.log("Error parsing customizationFields:", e);
+                // Invalid JSON, use empty array
                 customizationFields = [];
             }
         }
@@ -39,7 +39,9 @@ const addProduct = async (req,res, next) => {
             image: imagesUrl, 
             date: Date.now(),
             isCustomizable: isCustomizable === "true" ? true : false,
-            customizationFields
+            customizationFields,
+            stock: stock ? Number(stock) : 0,
+            sizes: [] // Always empty for corporate gifting
         }
 
         const product = new productModel(productData);
@@ -92,4 +94,72 @@ const singleProduct = async (req,res, next) => {
     }
 }
 
-export {addProduct , listProduct , removeProduct , singleProduct}
+//function for update product
+const updateProduct = async (req, res, next) => {
+    try {
+        const productId = req.params.id;
+        const {name, description, price, category, subCategory, bestseller, isCustomizable, stock} = req.body;
+        
+        // Find existing product
+        const existingProduct = await productModel.findById(productId);
+        if (!existingProduct) {
+            return res.status(404).json({success: false, message: "Product not found"});
+        }
+
+        // Parse customization fields if present
+        let customizationFields = [];
+        if(req.body.customizationFields){
+            try{
+                customizationFields = JSON.parse(req.body.customizationFields);
+            } catch(e){
+                customizationFields = [];
+            }
+        }
+
+        // Handle image updates
+        let imagesUrl = [...existingProduct.image]; // Keep existing images by default
+        
+        if (req.files && Object.keys(req.files).length > 0) {
+            const image1 = req.files.image1 && req.files.image1[0];
+            const image2 = req.files.image2 && req.files.image2[0];
+            const image3 = req.files.image3 && req.files.image3[0];
+            const image4 = req.files.image4 && req.files.image4[0];
+
+            const newImages = [image1, image2, image3, image4];
+            
+            // Upload new images and replace corresponding positions
+            for (let i = 0; i < newImages.length; i++) {
+                if (newImages[i]) {
+                    const result = await cloudinary.uploader.upload(newImages[i].path, {resource_type: "image"});
+                    imagesUrl[i] = result.secure_url;
+                }
+            }
+        }
+
+
+
+        // Prepare update data
+        const updateData = {
+            name: name || existingProduct.name,
+            description: description || existingProduct.description,
+            price: price ? Number(price) : existingProduct.price,
+            category: category || existingProduct.category,
+            subCategory: subCategory || existingProduct.subCategory,
+            bestseller: bestseller !== undefined ? (bestseller === "true" || bestseller === true) : existingProduct.bestseller,
+            image: imagesUrl,
+            isCustomizable: isCustomizable !== undefined ? (isCustomizable === "true" || isCustomizable === true) : existingProduct.isCustomizable,
+            customizationFields: customizationFields.length > 0 ? customizationFields : existingProduct.customizationFields,
+            sizes: [], // Always empty for corporate gifting
+            stock: stock ? Number(stock) : existingProduct.stock
+        };
+
+        const updatedProduct = await productModel.findByIdAndUpdate(productId, updateData, {new: true});
+        
+        res.json({success: true, message: "Product updated successfully", product: updatedProduct});
+
+    } catch (error) {
+        next(error);
+    }
+}
+
+export {addProduct , listProduct , removeProduct , singleProduct, updateProduct}

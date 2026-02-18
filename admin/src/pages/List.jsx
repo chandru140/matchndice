@@ -2,6 +2,7 @@ import React , {useEffect , useState} from 'react'
 import axios from 'axios'
 import { backendUrl, currency } from '../App'
 import { toast } from 'react-toastify'
+import { Link } from 'react-router-dom'
 
 const List = ({token}) => {
 
@@ -48,23 +49,27 @@ const List = ({token}) => {
       <p className='mb-2 '>All Products List</p>
       <div className='flex flex-col gap-2 '>
         {/*-------List table Title ----------*/}
-        <div className='hidden md:grid grid-cols-[1fr_3fr_1fr_1fr_1fr] items-center py-1 px-2 border bg-gray-100 text-sm'>
+        <div className='hidden md:grid grid-cols-[1fr_3fr_1fr_1fr_1fr_1fr] items-center py-1 px-2 border bg-gray-100 text-sm'>
           <b>Image</b>
           <b>Name</b>
           <b>Category</b>
           <b>Price</b>
           <b className='text-center'>Action</b>
+          <b className='text-center'>Edit</b>
         </div>
 
         {/*------- Product List -------- */}
         {
-          list.map((item , index) => (
-            <div key={index} className='grid grid-cols-[1fr_3fr_1fr] grid-cols-[1fr_3fr_1fr_1fr_1fr] items-center py-1 px-2 border bg-gray-100 text-sm'>
+          list.map((item, index) => (
+            <div key={index} className='grid grid-cols-[1fr_3fr_1fr] md:grid-cols-[1fr_3fr_1fr_1fr_1fr_1fr] items-center gap-2 py-1 px-2 border text-sm'>
               <img className='w-12 h-12 object-cover' src={item.image[0]} alt="" />
               <p>{item.name}</p>
               <p>{item.category?.name || item.category}</p>
               <p>{currency}{item.price}</p>
-              <p onClick={()=>removeProduct(item._id)} className='text-right md:text-center cursor-pointer text-lg'>X</p> 
+              <p onClick={()=>removeProduct(item._id)} className='text-right md:text-center cursor-pointer text-lg'>X</p>
+              <Link to={`/edit/${item._id}`} className='text-center text-blue-600 hover:text-blue-800 cursor-pointer'>
+                Edit
+              </Link>
             </div>
           ))
         }

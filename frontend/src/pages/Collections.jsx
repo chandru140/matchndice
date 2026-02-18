@@ -34,6 +34,31 @@ const Collections = () => {
     )
   }
 
+  // Filter subcategories based on selected categories
+  const [filteredSubCategories, setFilteredSubCategories] = useState([])
+
+  useEffect(() => {
+    if (category.length > 0) {
+      // Show only subcategories that belong to selected categories
+      // SubCategory model uses 'categoryId' field, which can be an object or string
+      const filtered = subCategories.filter(subCat => {
+        const parentCategoryId = subCat.categoryId?._id || subCat.categoryId
+        return parentCategoryId && category.includes(parentCategoryId)
+      })
+      setFilteredSubCategories(filtered)
+      
+      // Clear selected subcategories that don't belong to selected categories
+      setSubCategory(prev =>
+        prev.filter(subCatId =>
+          filtered.some(subCat => subCat._id === subCatId)
+        )
+      )
+    } else {
+      // Show all subcategories if no category is selected
+      setFilteredSubCategories(subCategories)
+    }
+  }, [category, subCategories])
+
   // APPLY FILTER + SEARCH + SORT (single source of truth)
   useEffect(() => {
     let tempProducts = [...products]
@@ -48,14 +73,14 @@ const Collections = () => {
     // 📦 Category filter
     if (category.length > 0) {
       tempProducts = tempProducts.filter(item =>
-        category.includes(item.category)
+        item.category && category.includes(item.category._id)
       )
     }
 
     // 🧥 SubCategory filter
     if (subCategory.length > 0) {
       tempProducts = tempProducts.filter(item =>
-        subCategory.includes(item.subCategory)
+        item.subCategory && subCategory.includes(item.subCategory._id)
       )
     }
 
@@ -116,17 +141,26 @@ const Collections = () => {
         } sm:block`}>
           <p className="mb-2 font-medium">Types</p>
 
-          {subCategories.map(item => (
-            <label key={item._id} className="flex gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                value={item._id}
-                className="w-3"
-                onChange={toggleSubCategory}
-              />
-              {item.name}
-            </label>
-          ))}
+          {filteredSubCategories.length > 0 ? (
+            filteredSubCategories.map(item => (
+              <label key={item._id} className="flex gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  value={item._id}
+                  className="w-3"
+                  onChange={toggleSubCategory}
+                  checked={subCategory.includes(item._id)}
+                />
+                {item.name}
+              </label>
+            ))
+          ) : (
+            <p className="text-sm text-gray-400">
+              {category.length > 0 
+                ? "No subcategories for selected category" 
+                : "Select a category first"}
+            </p>
+          )}
         </div>
 
       </div>

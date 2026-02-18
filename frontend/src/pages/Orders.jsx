@@ -47,7 +47,7 @@ const Orders = () => {
               {order.items && order.items.map((item, itemIndex) => (
                 <div key={itemIndex} className='py-3 border-t flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
                   <div className='flex items-start gap-6 text-sm'>
-                    <img className='w-16 sm:w-20' src={item.image?.[0]} alt="" />
+                    <img className='w-16 sm:w-20' src={item.image?.[0]} alt="" loading="lazy" />
                     <div>
                       <p className='text-xs sm:text-base font-medium'>{item.name}</p>
                       <div className='flex items-center gap-3 mt-2 text-base text-gray-700'>

@@ -1,5 +1,4 @@
 import userModel from "../models/userModel.js";
-import validator from "validator";
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 
@@ -15,15 +14,9 @@ const loginUser = async (req,res, next) => {
     try{
         const {email , password } = req.body
         
-        if(!email || !password){
-            res.status(400);
-            throw new Error("Please provide both email and password");
-        }
-
         const user = await userModel.findOne({email})
         if(!user){
-            res.status(400);
-            throw new Error("User does not exist");
+            return res.json({success:false, message:"User does not exist"});
         }
         
         const isMatch = await bcrypt.compare(password , user.password)
@@ -32,8 +25,7 @@ const loginUser = async (req,res, next) => {
             const token = createToken(user._id)
             res.json({success:true , message:"User logged in successfully" , user , token})
         }else{
-            res.status(401);
-            throw new Error("Invalid credentials");
+            res.json({success:false, message:"Invalid credentials"});
         }
 
     }catch(error){
@@ -46,27 +38,10 @@ const registerUser = async (req,res, next) => {
     try {
        const {name , email , password} = req.body 
        
-       if(!name || !email || !password){
-            res.status(400);
-            throw new Error("Please provide name, email, and password");
-       }
-
        //checking user already exists or not
        const exists = await userModel.findOne({email})
        if(exists){
-        res.status(400);
-        throw new Error("User already exists");
-       }
-
-       //validating email fromat and strong password
-       if(!validator.isEmail(email)){
-        res.status(400);
-        throw new Error("Invalid email format");
-       }
-
-       if(password.length < 8 ){
-         res.status(400);
-         throw new Error("Password must be at least 8 characters long");
+        return res.json({success:false, message:"User already exists"});
        }
 
        //hashing user password
@@ -97,12 +72,16 @@ const adminLogin = async (req,res, next) => {
         
        if(email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD){
 
-          const token = jwt.sign(email + password , process.env.JWT_SECRET)
+          // Create proper JWT with role and expiration  
+          const token = jwt.sign(
+              { email, role: 'admin' }, 
+              process.env.JWT_SECRET,
+              { expiresIn: '1d' }
+          )
           res.json({success:true , msg:"Admin logged in successfully" , token})
 
        }else{
-        res.status(401);
-        throw new Error("Invalid admin credentials");
+        res.json({success:false, message:"Invalid admin credentials"});
     }
 
     } catch (error) {
