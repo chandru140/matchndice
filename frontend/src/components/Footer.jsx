@@ -40,7 +40,7 @@ const Footer = () => {
 
         {/* Contact */}
         <div>
-          <p className="text-xl font-medium mb-5">GET IN TOUCH</p>
+          <p className="text-xl font-medium mb-5">GET IN TOUCH WITH US </p>
           <ul className="flex flex-col gap-2 text-gray-400">
             <li>
               <a href='tel:+919004140139' className='hover:text-white transition-colors'>
