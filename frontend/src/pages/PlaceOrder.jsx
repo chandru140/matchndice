@@ -60,12 +60,18 @@ const PlaceOrder = () => {
     try{
       let orderItems = []
       for(const items in cartItems){
-        for(const size in cartItems[items]){
-          if(cartItems[items][size] > 0){
-            const itemInfo = structuredClone(products.find(product => product._id === items))
-            if(itemInfo){
-              itemInfo.size = size
-              itemInfo.quantity = cartItems[items][size]
+        for(const cartKey in cartItems[items]){
+          const cartEntry = cartItems[items][cartKey];
+          const itemInfo = structuredClone(products.find(product => product._id === items))
+          if(itemInfo){
+            if(typeof cartEntry === 'number' && cartEntry > 0){
+              itemInfo.size = cartKey
+              itemInfo.quantity = cartEntry
+              orderItems.push(itemInfo)
+            } else if(typeof cartEntry === 'object' && cartEntry.quantity > 0){
+              itemInfo.size = cartEntry.size
+              itemInfo.quantity = cartEntry.quantity
+              itemInfo.customization = cartEntry.customization || null
               orderItems.push(itemInfo)
             }
           }

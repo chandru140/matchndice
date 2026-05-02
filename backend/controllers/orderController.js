@@ -112,8 +112,8 @@ const placeOrderStripe = async (req, res, next) => {
             payment_method_types: ['card'],
             line_items,
             mode: 'payment',
-            success_url: `${origin}/verify?succes=true&orderId=${newOrder._id}`,
-            cancel_url: `${origin}/verify?succes=false&orderId=${newOrder._id}`,
+            success_url: `${origin}/verify?success=true&orderId=${newOrder._id}`,
+            cancel_url: `${origin}/verify?success=false&orderId=${newOrder._id}`,
         })
 
         res.json({ success: true, session_url:session.url })
@@ -126,7 +126,7 @@ const placeOrderStripe = async (req, res, next) => {
 //verify stripe 
 const verifyStripe = async (req, res, next) => {
     try {
-        const {success, orderId , userId} = req.query
+        const {success, orderId , userId} = req.body
         if(success === 'true'){
             await orderModel.findByIdAndUpdate(orderId, {payment: true})
             await userModel.findByIdAndUpdate(userId, {cartData: {}})

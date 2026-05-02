@@ -4,7 +4,7 @@ import axios from 'axios'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
-const verify = () => {
+const Verify = () => {
 
     const {navigate , token , setCartItems , backendUrl} = useContext(ShopContext)
     const [searchParams , setSearchParams] = useSearchParams()
@@ -39,9 +39,7 @@ const verify = () => {
     };
 
     useEffect(() => {
-        if (success === "true") {
-            verifyPayment();
-        }
+        verifyPayment();
     }, [token]);
 
   return (
@@ -51,4 +49,4 @@ const verify = () => {
   )
 }
 
-export default verify
+export default Verify
