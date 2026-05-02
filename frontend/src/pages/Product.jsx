@@ -182,14 +182,14 @@ const Product = () => {
                 key={index}
                 src={item}
                 onClick={() => setImage(item)}
-                className="w-[24%] sm:w-full sm:w-full sm:mb-3 flex-shrink-0 cursor-pointer"
+                className="w-[24%] sm:w-full sm:mb-3 flex-shrink-0 cursor-pointer object-contain"
                 alt=""
               />
             ))}
           </div>
 
           <div className="w-full sm:w-[80%]">
-            <img src={image} className="ml-2 w-full h-auto" alt="" />
+            <img src={image} className="ml-2 w-full max-h-[500px] object-contain" alt="" />
           </div>
         </div>
 
