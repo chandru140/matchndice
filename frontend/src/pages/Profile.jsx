@@ -32,8 +32,7 @@ const Profile = () => {
         toast.error(response.data.message)
       }
     } catch (error) {
-      console.log(error)
-      toast.error(error.message)
+      toast.error(error.response?.data?.message || error.message || 'Failed to load profile.')
     }
   }
 
@@ -70,8 +69,8 @@ const Profile = () => {
       return
     }
 
-    if (formData.newPassword && formData.newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters')
+    if (formData.newPassword && formData.newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters')
       return
     }
 
@@ -101,8 +100,7 @@ const Profile = () => {
         toast.error(response.data.message)
       }
     } catch (error) {
-      console.log(error)
-      toast.error(error.message)
+      toast.error(error.response?.data?.message || error.message || 'Failed to update profile.')
     }
   }
 

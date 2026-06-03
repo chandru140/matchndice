@@ -23,19 +23,16 @@ const Hero = () => {
           </p>
 
           <Link to='/collection'>
-            <div className='flex items-center gap-2 group cursor-pointer'>
-              <p className='font-semibold text-sm md:text-base group-hover:underline underline-offset-4 transition-all'>
-                EXPLORE COLLECTION
-              </p>
-              <p className='w-8 md:w-11 h-[1px] bg-black'></p>
-            </div>
+            <button className='bg-black text-white px-8 py-3 mt-4 hover:bg-gray-800 transition-colors text-sm tracking-widest'>
+              SHOP NOW
+            </button>
           </Link>
 
         </div>
       </div>
 
       {/* Hero right side */}
-      <img className='w-full sm:w-1/2' src={assets.hero_img} alt="Match n Dice personalized gifts" />
+      <img className='w-full sm:w-1/2' src={assets.heroo} alt="Match n Dice personalized gifts" />
     </div>
   )
 }

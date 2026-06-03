@@ -4,22 +4,22 @@ import { assets } from '../assets/frontend_assets/assets'
 const OurPolicy = () => {
   return (
     <div className='flex flex-col sm:flex-row justify-around gap-12 sm:gap-2 text-center py-20 text-xs sm:text-sm md:text-base text-gray-700'>
-      
+
         <div>
-            <img src={assets.exchange_icon} className='w-12 m-auto mb-5' alt="" />
-            <p className='font-semibond'>Easy Exchange Policy</p>
+            <img src={assets.exchange_icon} className='w-12 m-auto mb-5' alt="Easy exchange icon" />
+            <p className='font-semibold'>Easy Exchange Policy</p>
             <p className='text-gray-400'>We offer hassle free exchange policy</p>
         </div>
 
         <div>
-            <img src={assets.quality_icon} className='w-12 m-auto mb-5' alt="" />
-            <p className='font-semibond'>7 Day Policy</p>
+            <img src={assets.quality_icon} className='w-12 m-auto mb-5' alt="7 day return icon" />
+            <p className='font-semibold'>7 Day Return Policy</p>
             <p className='text-gray-400'>We provide 7 days free return policy</p>
         </div>
 
         <div>
-            <img src={assets.support_img} className='w-12 m-auto mb-5' alt="" />
-            <p className='font-semibond'>Best customer support</p>
+            <img src={assets.support_img} className='w-12 m-auto mb-5' alt="Customer support icon" />
+            <p className='font-semibold'>Best Customer Support</p>
             <p className='text-gray-400'>We provide 24/7 customer support</p>
         </div>
 
@@ -28,3 +28,4 @@ const OurPolicy = () => {
 }
 
 export default OurPolicy
+

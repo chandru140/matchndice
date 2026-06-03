@@ -1,57 +1,72 @@
-import subCategoryModel from "../models/subCategoryModel.js"
+import subCategoryModel from "../models/subCategoryModel.js";
 
-const addSubCategory = async (req, res) => {
+// POST /api/subcategory/add — Admin: add a new subcategory
+const addSubCategory = async (req, res, next) => {
     try {
-        const {name, categoryId} = req.body;
+        const { name, categoryId } = req.body;
 
-        if (!name || !categoryId) {
-            return res.json({success: false, message: "Name and Category ID are required"});
+        if (!name || !name.trim()) {
+            return res.status(400).json({ success: false, message: "Subcategory name is required." });
+        }
+        if (!categoryId) {
+            return res.status(400).json({ success: false, message: "Parent category ID is required." });
         }
 
-        const subCategory = new subCategoryModel({
-            name,
-            categoryId
-        })
+        // Check for duplicate subcategory under same category
+        const existing = await subCategoryModel.findOne({
+            categoryId,
+            name: { $regex: new RegExp(`^${name.trim()}$`, "i") },
+        });
+        if (existing) {
+            return res.status(409).json({ success: false, message: "A subcategory with this name already exists in this category." });
+        }
 
+        const subCategory = new subCategoryModel({ name: name.trim(), categoryId });
         await subCategory.save();
-        res.json({success: true, message: "SubCategory Added"});
-
+        res.status(201).json({ success: true, message: "Subcategory added successfully." });
     } catch (error) {
-        console.log(error);
-        res.json({success: false, message: error.message});
+        next(error);
     }
-}
+};
 
-const listSubCategory = async (req, res) => {
+// GET /api/subcategory/list — Public: list all subcategories with their parent category
+const listSubCategory = async (req, res, next) => {
     try {
-        const subCategories = await subCategoryModel.find({}).populate('categoryId', 'name');
-        res.json({success: true, subCategories});
+        const subCategories = await subCategoryModel.find({}).populate("categoryId", "name").sort({ name: 1 });
+        res.json({ success: true, subCategories });
     } catch (error) {
-        console.log(error);
-        res.json({success: false, message: error.message});
+        next(error);
     }
-}
+};
 
-const listSubCategoryByCategory = async (req, res) => {
+// GET /api/subcategory/by-category/:categoryId — Public: list subcategories by category
+const listSubCategoryByCategory = async (req, res, next) => {
     try {
-        const {categoryId} = req.params;
-        const subCategories = await subCategoryModel.find({categoryId});
-        res.json({success: true, subCategories});
+        const { categoryId } = req.params;
+        const subCategories = await subCategoryModel.find({ categoryId }).sort({ name: 1 });
+        res.json({ success: true, subCategories });
     } catch (error) {
-        console.log(error);
-        res.json({success: false, message: error.message});
+        next(error);
     }
-}
+};
 
-const removeSubCategory = async (req, res) => {
+// POST /api/subcategory/remove — Admin: remove a subcategory by ID
+const removeSubCategory = async (req, res, next) => {
     try {
-        const {id} = req.body;
-        await subCategoryModel.findByIdAndDelete(id);
-        res.json({success: true, message: "SubCategory Removed"});
-    } catch (error) {
-        console.log(error);
-        res.json({success: false, message: error.message});
-    }
-}
+        const { id } = req.body;
+        if (!id) {
+            return res.status(400).json({ success: false, message: "Subcategory ID is required." });
+        }
 
-export {addSubCategory, listSubCategory, listSubCategoryByCategory, removeSubCategory}
+        const subCategory = await subCategoryModel.findByIdAndDelete(id);
+        if (!subCategory) {
+            return res.status(404).json({ success: false, message: "Subcategory not found." });
+        }
+
+        res.json({ success: true, message: "Subcategory removed successfully." });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export { addSubCategory, listSubCategory, listSubCategoryByCategory, removeSubCategory };

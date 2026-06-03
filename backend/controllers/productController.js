@@ -1,5 +1,9 @@
 import {v2 as cloudinary} from "cloudinary"
 import productModel from "../models/productModel.js"
+// Explicitly import so Mongoose registers these models before .populate() runs
+// (required in serverless/Vercel environments where modules load lazily)
+import "../models/categoryModel.js"
+import "../models/subCategoryModel.js"
 
 // function for add product 
 const addProduct = async (req,res, next) => {
@@ -54,13 +58,15 @@ const addProduct = async (req,res, next) => {
     }
 }
 
-//fuction for list Product
+//function for list Product
 const listProduct = async (req,res, next) => {
     try {
-        
-        const products = await productModel.find()
+        // ✅ .lean() returns plain JS objects instead of Mongoose documents (~3x faster for read-only queries)
+        // isDeleted filter excludes soft-deleted products
+        const products = await productModel.find({ isDeleted: { $ne: true } })
             .populate('category', 'name')
-            .populate('subCategory', 'name');
+            .populate('subCategory', 'name')
+            .lean();
         res.json({success:true , message:"Product listed successfully" , products})
 
     } catch (error) {
@@ -68,10 +74,19 @@ const listProduct = async (req,res, next) => {
     }
 }
 
-//function for remove product 
+//function for remove product — SOFT DELETE only (never hard-delete: preserves order history)
 const removeProduct = async (req,res, next) => {
     try {
-        await productModel.findByIdAndDelete(req.body.id)
+        // ✅ Soft delete: set isDeleted=true rather than removing the document.
+        // Hard-deleting breaks orders that reference this product's _id.
+        const product = await productModel.findByIdAndUpdate(
+            req.body.id,
+            { isDeleted: true },
+            { new: true }
+        )
+        if (!product) {
+            return res.status(404).json({ success: false, message: "Product not found." })
+        }
         res.json({success:true , message:"Product removed successfully"})
 
     } catch (error) {
@@ -162,4 +177,34 @@ const updateProduct = async (req, res, next) => {
     }
 }
 
-export {addProduct , listProduct , removeProduct , singleProduct, updateProduct}
+// PATCH /api/product/stock/:id — Admin: update stock only (atomic)
+const updateStock = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { stock } = req.body;
+
+        if (stock === undefined || stock === null) {
+            return res.status(400).json({ success: false, message: 'Stock quantity is required.' });
+        }
+        const qty = Number(stock);
+        if (!Number.isInteger(qty) || qty < 0) {
+            return res.status(400).json({ success: false, message: 'Stock must be a non-negative integer.' });
+        }
+
+        const product = await productModel.findByIdAndUpdate(
+            id,
+            { $set: { stock: qty } },
+            { new: true, runValidators: true }
+        );
+
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found.' });
+        }
+
+        res.json({ success: true, message: 'Stock updated successfully.', stock: product.stock });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export { addProduct, listProduct, removeProduct, singleProduct, updateProduct, updateStock }

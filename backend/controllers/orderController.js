@@ -4,227 +4,369 @@ import productModel from "../models/productModel.js";
 import Stripe from "stripe";
 import Razorpay from "razorpay";
 
-//global variables 
-const currency = 'inr'
-const deliveryCharge = 50
+// Global variables
+const currency = "inr";
+const deliveryCharge = 50;
 
-//GATEWAY INTEGRATION
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+// Payment gateway instances
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const razorpayInstance = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
-})
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
-//placing orders using cod 
+/**
+ * ✅ SECURITY: Recalculate order total SERVER-SIDE from DB prices.
+ * NEVER trust the amount sent from the frontend — it can be manipulated
+ * (e.g. user sends { amount: 1 } to get free orders).
+ */
+const calculateServerTotal = async (items, charge) => {
+    let subtotal = 0;
+    for (const item of items) {
+        const product = await productModel.findById(item._id).lean();
+        if (!product) {
+            const err = new Error(`Product not found: ${item.name || item._id}`);
+            err.status = 400;
+            throw err;
+        }
+        subtotal += product.price * item.quantity;
+    }
+    return Math.round((subtotal + charge) * 100) / 100;
+};
+
+/**
+ * Validates cart items and checks stock availability.
+ */
+const validateAndCheckStock = async (items) => {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        const err = new Error("Cart is empty. Please add items before placing an order.");
+        err.status = 400;
+        throw err;
+    }
+
+    for (const item of items) {
+        const product = await productModel.findById(item._id);
+        if (!product) {
+            const err = new Error(`Product "${item.name}" is no longer available.`);
+            err.status = 400;
+            throw err;
+        }
+        if (product.stock < item.quantity) {
+            const err = new Error(
+                `Insufficient stock for "${item.name}". Available: ${product.stock}, Requested: ${item.quantity}.`
+            );
+            err.status = 400;
+            throw err;
+        }
+    }
+};
+
+/**
+ * Deducts stock for all items in the order.
+ * Called ONLY after the order is successfully saved.
+ */
+const deductStock = async (items) => {
+    await Promise.all(
+        items.map((item) =>
+            productModel.findByIdAndUpdate(item._id, { $inc: { stock: -item.quantity } })
+        )
+    );
+};
+
+// POST /api/order/place — Cash on Delivery
 const placeOrder = async (req, res, next) => {
     try {
-        console.log("Received order data:", req.body)
-        const { userId, items, amount, address, paymentMethod } = req.body
-        
-        if (!amount) {
-            res.status(400);
-            throw new Error("Amount is required");
+        const userId = req.userId || req.body.userId;
+        const { items, address } = req.body;
+
+        if (!address || !address.firstName || !address.phone) {
+            return res.status(400).json({ success: false, message: "Delivery address is incomplete." });
         }
 
-        // Check stock availability for all items
-        for (const item of items) {
-            const product = await productModel.findById(item._id);
-            if (!product) {
-                res.status(400);
-                throw new Error(`Product ${item.name} not found`);
-            }
-            if (product.stock < item.quantity) {
-                res.status(400);
-                throw new Error(`Insufficient stock for ${item.name}. Available: ${product.stock}, Requested: ${item.quantity}`);
-            }
-        }
+        // Validate stock BEFORE saving order
+        await validateAndCheckStock(items);
 
-        // Deduct stock for all items
-        for (const item of items) {
-            await productModel.findByIdAndUpdate(
-                item._id,
-                { $inc: { stock: -item.quantity } }
-            );
-        }
-        
+        // ✅ SECURITY: Recalculate total server-side — never trust frontend amount
+        const verifiedAmount = await calculateServerTotal(items, deliveryCharge);
+
         const order = new orderModel({
             userId,
             items,
-            amount,
+            amount: verifiedAmount,
             address,
-            paymentMethod,
-            payment: paymentMethod === 'COD' ? false : true ,
-            date: Date.now()
+            paymentMethod: "COD",
+            payment: false,
+            date: Date.now(),
+        });
+        await order.save();
 
-           
-        })
-        await order.save()
-        await userModel.findByIdAndUpdate(userId, { cartData: {} })
+        // Deduct stock after order is saved
+        await deductStock(items);
 
-        res.status(200).json({ success: true, message: "Order Placed", order })
+        // Clear user cart
+        await userModel.findByIdAndUpdate(userId, { cartData: {} });
+
+        res.status(201).json({ success: true, message: "Order placed successfully.", orderId: order._id });
     } catch (error) {
         next(error);
     }
-}
+};
 
-//placing order using stripe method 
+// POST /api/order/stripe — Stripe checkout session
 const placeOrderStripe = async (req, res, next) => {
     try {
-        const { userId, items, amount, address } = req.body
-        const {origin} = req.headers
+        const userId = req.userId || req.body.userId;
+        const { items, address } = req.body;
 
-        const orderData = {
-            userId,
-            items,
-            amount,
-            address,
-            paymentMethod: 'Stripe',
-            payment: false,
-            date: Date.now()
+        if (!items || items.length === 0) {
+            return res.status(400).json({ success: false, message: "Cart is empty." });
         }
 
-        const newOrder = new orderModel(orderData)
-        await newOrder.save()
-        
+        await validateAndCheckStock(items);
+
+        // ✅ SECURITY: Always recalculate total from DB prices
+        const verifiedAmount = await calculateServerTotal(items, deliveryCharge);
+
+        const frontendUrl =
+            process.env.FRONTEND_URL ||
+            req.headers.origin ||
+            "http://localhost:5173";
+
+        const order = new orderModel({
+            userId,
+            items,
+            amount: verifiedAmount,
+            address,
+            paymentMethod: "Stripe",
+            payment: false,
+            date: Date.now(),
+        });
+        await order.save();
+
         const line_items = items.map((item) => ({
             price_data: {
-                currency: currency,
-                product_data: {
-                    name: item.name,
-                },
-                unit_amount: item.price * 100,
+                currency,
+                product_data: { name: item.name },
+                unit_amount: Math.round(item.price * 100),
             },
             quantity: item.quantity,
-        }))
+        }));
 
         line_items.push({
             price_data: {
-                currency: currency,
-                product_data: {
-                    name: 'Delivery Charge',
-                },
+                currency,
+                product_data: { name: "Delivery Charge" },
                 unit_amount: deliveryCharge * 100,
             },
             quantity: 1,
-        })
+        });
 
         const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
+            payment_method_types: ["card"],
             line_items,
-            mode: 'payment',
-            success_url: `${origin}/verify?success=true&orderId=${newOrder._id}`,
-            cancel_url: `${origin}/verify?success=false&orderId=${newOrder._id}`,
-        })
+            mode: "payment",
+            success_url: `${frontendUrl}/verify?success=true&orderId=${order._id}`,
+            cancel_url: `${frontendUrl}/verify?success=false&orderId=${order._id}`,
+        });
 
-        res.json({ success: true, session_url:session.url })
-       
+        res.json({ success: true, session_url: session.url });
     } catch (error) {
         next(error);
     }
-}
+};
 
-//verify stripe 
+// POST /api/order/verifyStripe — Verify Stripe payment callback
 const verifyStripe = async (req, res, next) => {
     try {
-        const {success, orderId , userId} = req.body
-        if(success === 'true'){
-            await orderModel.findByIdAndUpdate(orderId, {payment: true})
-            await userModel.findByIdAndUpdate(userId, {cartData: {}})
-            res.json({success: true})
-        }else{
-            await orderModel.findByIdAndDelete(orderId)
-            res.json({success: false})
+        const { success, orderId } = req.body;
+        const userId = req.userId || req.body.userId;
+
+        const isSuccess = success === true || success === "true";
+
+        if (isSuccess) {
+            const order = await orderModel.findById(orderId);
+            if (!order) {
+                return res.status(404).json({ success: false, message: "Order not found." });
+            }
+
+            await orderModel.findByIdAndUpdate(orderId, { payment: true });
+            await deductStock(order.items);
+            await userModel.findByIdAndUpdate(userId, { cartData: {} });
+
+            res.json({ success: true, message: "Payment verified successfully." });
+        } else {
+            await orderModel.findByIdAndDelete(orderId);
+            res.json({ success: false, message: "Payment was cancelled." });
         }
     } catch (error) {
         next(error);
     }
-}
+};
 
-//placing order using razorpay method 
+// POST /api/order/razorpay — Create Razorpay order
 const placeOrderRazorpay = async (req, res, next) => {
     try {
-        const { userId, items, amount, address } = req.body
+        const userId = req.userId || req.body.userId;
+        const { items, address } = req.body;
+
+        if (!items || items.length === 0) {
+            return res.status(400).json({ success: false, message: "Cart is empty." });
+        }
+
+        await validateAndCheckStock(items);
+
+        // ✅ SECURITY: Recalculate total from DB prices
+        const verifiedAmount = await calculateServerTotal(items, deliveryCharge);
+
         const order = new orderModel({
             userId,
             items,
-            amount,
+            amount: verifiedAmount,
             address,
-            paymentMethod: 'Razorpay',
-            payment: false
-        })
-        await order.save()
+            paymentMethod: "Razorpay",
+            payment: false,
+            date: Date.now(),
+        });
+        await order.save();
 
         const options = {
-            amount : amount * 100,
-            currency : currency.toUpperCase(),
-            receipt : order._id.toString()
-        }
-        await razorpayInstance.orders.create(options , (error , order) => {
-            if(error){
-                return res.json({success:false , message:"Error"})
+            amount: Math.round(verifiedAmount * 100), // Razorpay expects paise
+            currency: currency.toUpperCase(),
+            receipt: order._id.toString(),
+        };
+
+        razorpayInstance.orders.create(options, (error, razorpayOrder) => {
+            if (error) {
+                console.error("Razorpay order creation failed:", error);
+                return res.status(500).json({ success: false, message: "Payment gateway error. Please try again." });
             }
-            else{
-                res.json({success:true , order})
-            }
-        })
+            res.json({ success: true, order: razorpayOrder });
+        });
     } catch (error) {
         next(error);
     }
-}
+};
 
-//verify Razorpay 
-const verifyRazorpay = async (req,res, next) => {
+// POST /api/order/verifyRazorpay — Verify Razorpay payment
+const verifyRazorpay = async (req, res, next) => {
     try {
-        const {razorpay_order_id} = req.body
-        
-        const orderInfo = await razorpayInstance.orders.fetch(razorpay_order_id)
-        if(orderInfo.status === 'paid'){
-            await orderModel.findByIdAndUpdate(orderInfo.receipt, {payment: true});
-            const order = await orderModel.findById(orderInfo.receipt)
-            await userModel.findByIdAndUpdate(order.userId, {cartData: {}})
-            res.json({success: true, message: "Payment Successful"})
+        const { razorpay_order_id } = req.body;
+        const userId = req.userId || req.body.userId;
+
+        if (!razorpay_order_id) {
+            return res.status(400).json({ success: false, message: "Razorpay order ID is required." });
         }
-        else{
-            res.json({success: false, message: 'Payment Failed'})
+
+        const orderInfo = await razorpayInstance.orders.fetch(razorpay_order_id);
+
+        if (orderInfo.status === "paid") {
+            const order = await orderModel.findById(orderInfo.receipt);
+            if (!order) {
+                return res.status(404).json({ success: false, message: "Order not found." });
+            }
+
+            await orderModel.findByIdAndUpdate(orderInfo.receipt, { payment: true });
+            await deductStock(order.items);
+            await userModel.findByIdAndUpdate(userId, { cartData: {} });
+
+            res.json({ success: true, message: "Payment verified successfully." });
+        } else {
+            res.json({ success: false, message: "Payment not completed." });
         }
-        
-    }catch(error){
+    } catch (error) {
         next(error);
     }
-}
+};
 
-//All order data for admin panel 
+// POST /api/order/list — Admin: get all orders
 const allOrders = async (req, res, next) => {
     try {
-        const orders = await orderModel.find({}).sort({ date: -1 })
-        res.status(200).json({ success: true, orders })
+        const orders = await orderModel.find({}).sort({ date: -1 }).lean();
+        res.json({ success: true, orders });
     } catch (error) {
         next(error);
     }
-}
+};
 
-//user order data for frontend 
+// POST /api/order/userorders — User: get own orders
 const userOrders = async (req, res, next) => {
     try {
-
-        const { userId } = req.body
-        const orders = await orderModel.find({ userId }).sort({ date: -1 })
-        res.status(200).json({ success: true, orders })
-
+        const userId = req.userId || req.body.userId;
+        const orders = await orderModel.find({ userId }).sort({ date: -1 }).lean();
+        res.json({ success: true, orders });
     } catch (error) {
         next(error);
     }
-}
+};
 
-// update order status from admin panel 
+// POST /api/order/status — Admin: update order status
 const updateStatus = async (req, res, next) => {
     try {
-        const { orderId, status } = req.body
-        await orderModel.findByIdAndUpdate(orderId, { status })
-        res.status(200).json({ success: true, message: "Status Updated" })
+        const { orderId, status } = req.body;
+
+        const validStatuses = ["Order Placed", "Packing", "Shipped", "Out for Delivery", "Delivered"];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ success: false, message: "Invalid order status." });
+        }
+
+        await orderModel.findByIdAndUpdate(orderId, { status });
+        res.json({ success: true, message: "Order status updated." });
     } catch (error) {
         next(error);
     }
-}
+};
 
-export { placeOrder, placeOrderStripe, placeOrderRazorpay, allOrders, userOrders, updateStatus, verifyStripe, verifyRazorpay }
+// POST /api/order/cancel — User: cancel own order
+const cancelOrder = async (req, res, next) => {
+    try {
+        const userId = req.userId || req.body.userId;
+        const { orderId } = req.body;
+
+        if (!orderId) {
+            return res.status(400).json({ success: false, message: "Order ID is required." });
+        }
+
+        const order = await orderModel.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found." });
+        }
+
+        // Security: ensure user owns this order
+        if (order.userId.toString() !== userId.toString()) {
+            return res.status(403).json({ success: false, message: "Not authorized to cancel this order." });
+        }
+
+        const cancellableStatuses = ["Order Placed", "Packing"];
+        if (!cancellableStatuses.includes(order.status)) {
+            return res.status(400).json({
+                success: false,
+                message: `Cannot cancel order at status: "${order.status}". Please contact support.`,
+            });
+        }
+
+        // Restore stock for each item
+        await Promise.all(
+            order.items.map((item) =>
+                productModel.findByIdAndUpdate(item._id, { $inc: { stock: item.quantity } })
+            )
+        );
+
+        await orderModel.findByIdAndUpdate(orderId, { status: "Cancelled" });
+
+        res.json({ success: true, message: "Order cancelled and stock restored." });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export {
+    placeOrder,
+    placeOrderStripe,
+    placeOrderRazorpay,
+    allOrders,
+    userOrders,
+    updateStatus,
+    verifyStripe,
+    verifyRazorpay,
+    cancelOrder,
+};

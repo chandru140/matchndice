@@ -1,134 +1,131 @@
-import React, { useContext, useState, useEffect } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { ShopContext } from '../context/ShopContext'
 import { assets } from '../assets/frontend_assets/assets'
 import ProductItem from '../components/ProductItem'
 import Title from '../components/Title'
+import { useSearchParams } from 'react-router-dom'
 
 const Collections = () => {
-
   const { products, search, showSearch, categories, subCategories } = useContext(ShopContext)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [showFilter, setShowFilter] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [filterProducts, setFilterProducts] = useState([])
-  const [category, setCategory] = useState([])
-  const [subCategory, setSubCategory] = useState([])
-  const [sortType, setSortType] = useState('relevant')
 
-  // Toggle category
-  const toggleCategory = (e) => {
+  // Read filter state from URL params (enables bookmarking & sharing)
+  const [category, setCategory] = useState(() => {
+    const c = searchParams.get('category')
+    return c ? c.split(',') : []
+  })
+  const [subCategory, setSubCategory] = useState(() => {
+    const sc = searchParams.get('subCategory')
+    return sc ? sc.split(',') : []
+  })
+  const [sortType, setSortType] = useState(searchParams.get('sort') || 'relevant')
+  const [filteredSubCategories, setFilteredSubCategories] = useState([])
+
+  // Sync state → URL params
+  useEffect(() => {
+    const params = {}
+    if (category.length > 0) params.category = category.join(',')
+    if (subCategory.length > 0) params.subCategory = subCategory.join(',')
+    if (sortType !== 'relevant') params.sort = sortType
+    setSearchParams(params, { replace: true })
+  }, [category, subCategory, sortType])
+
+  const toggleCategory = e => {
     const value = e.target.value
-    setCategory(prev =>
-      prev.includes(value)
-        ? prev.filter(item => item !== value)
-        : [...prev, value]
-    )
+    setCategory(prev => prev.includes(value) ? prev.filter(i => i !== value) : [...prev, value])
   }
 
-  // Toggle sub-category
-  const toggleSubCategory = (e) => {
+  const toggleSubCategory = e => {
     const value = e.target.value
-    setSubCategory(prev =>
-      prev.includes(value)
-        ? prev.filter(item => item !== value)
-        : [...prev, value]
-    )
+    setSubCategory(prev => prev.includes(value) ? prev.filter(i => i !== value) : [...prev, value])
   }
 
   // Filter subcategories based on selected categories
-  const [filteredSubCategories, setFilteredSubCategories] = useState([])
-
   useEffect(() => {
     if (category.length > 0) {
-      // Show only subcategories that belong to selected categories
-      // SubCategory model uses 'categoryId' field, which can be an object or string
       const filtered = subCategories.filter(subCat => {
-        const parentCategoryId = subCat.categoryId?._id || subCat.categoryId
-        return parentCategoryId && category.includes(parentCategoryId)
+        const parentCatId = subCat.categoryId?._id || subCat.categoryId
+        return parentCatId && category.includes(parentCatId)
       })
       setFilteredSubCategories(filtered)
-      
-      // Clear selected subcategories that don't belong to selected categories
-      setSubCategory(prev =>
-        prev.filter(subCatId =>
-          filtered.some(subCat => subCat._id === subCatId)
-        )
-      )
+      setSubCategory(prev => prev.filter(id => filtered.some(sc => sc._id === id)))
     } else {
-      // Show all subcategories if no category is selected
       setFilteredSubCategories(subCategories)
     }
   }, [category, subCategories])
 
-  // APPLY FILTER + SEARCH + SORT (single source of truth)
+  // Apply filters + search + sort
   useEffect(() => {
-    let tempProducts = [...products]
+    let temp = [...products]
 
-    // 🔍 Search filter
-    if (showSearch && search) {
-      tempProducts = tempProducts.filter(item =>
-        item.name.toLowerCase().includes(search.toLowerCase())
-      )
+    if (search) {
+      temp = temp.filter(item => item.name.toLowerCase().includes(search.toLowerCase()))
     }
-
-    // 📦 Category filter
     if (category.length > 0) {
-      tempProducts = tempProducts.filter(item =>
-        item.category && category.includes(item.category._id)
-      )
+      temp = temp.filter(item => item.category && category.includes(item.category._id))
     }
-
-    // 🧥 SubCategory filter
     if (subCategory.length > 0) {
-      tempProducts = tempProducts.filter(item =>
-        item.subCategory && subCategory.includes(item.subCategory._id)
-      )
+      temp = temp.filter(item => item.subCategory && subCategory.includes(item.subCategory._id))
     }
+    if (sortType === 'low-high') temp.sort((a, b) => a.price - b.price)
+    else if (sortType === 'high-low') temp.sort((a, b) => b.price - a.price)
 
-    // 🔃 Sorting
-    if (sortType === 'low-high') {
-      tempProducts.sort((a, b) => a.price - b.price)
-    } 
-    else if (sortType === 'high-low') {
-      tempProducts.sort((a, b) => b.price - a.price)
-    }
+    setFilterProducts(temp)
+    setLoading(false)
+  }, [products, search, category, subCategory, sortType])
 
-    setFilterProducts(tempProducts)
+  const clearFilters = () => {
+    setCategory([])
+    setSubCategory([])
+    setSortType('relevant')
+  }
 
-  }, [products, search, showSearch, category, subCategory, sortType])
+  const hasActiveFilters = category.length > 0 || subCategory.length > 0 || sortType !== 'relevant'
 
   return (
-    <div className="flex flex-col sm:flex-row gap-1 sm:gap-10 pt-10 border-t">
+    <div className='flex flex-col sm:flex-row gap-1 sm:gap-10 pt-10 border-t'>
 
-      {/* Filter Section */}
-      <div className="min-w-60">
-
-        <p
-          className="my-2 text-xl flex items-center cursor-pointer gap-2"
-          onClick={() => setShowFilter(!showFilter)}
-        >
-          FILTERS
-          <img
-            className={`h-3 sm:hidden transition-transform ${
-              showFilter ? 'rotate-90' : ''
-            }`}
-            src={assets.dropdown_icon}
-            alt="toggle"
-          />
-        </p>
+      {/* Filter Sidebar */}
+      <div className='min-w-60'>
+        <div className='flex items-center justify-between mb-2'>
+          <p
+            className='text-xl flex items-center cursor-pointer gap-2'
+            onClick={() => setShowFilter(!showFilter)}
+          >
+            FILTERS
+            <img
+              className={`h-3 sm:hidden transition-transform ${showFilter ? 'rotate-90' : ''}`}
+              src={assets.dropdown_icon}
+              alt='toggle filters'
+            />
+          </p>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className='text-xs text-red-500 hover:underline sm:block hidden'
+            >
+              Clear all
+            </button>
+          )}
+        </div>
 
         {/* Category Filter */}
-        <div className={`border border-gray-300 pl-5 py-3 mt-6 ${
-          showFilter ? 'block' : 'hidden'
-        } sm:block`}>
-          <p className="mb-2 font-medium">Categories</p>
-
-          {categories.map(item => (
-            <label key={item._id} className="flex gap-2 text-sm text-gray-700">
+        <div className={`border border-gray-300 pl-5 py-3 mt-6 ${showFilter ? 'block' : 'hidden'} sm:block`}>
+          <p className='mb-2 font-medium'>Categories</p>
+          {categories.length === 0 ? (
+            <p className='text-sm text-gray-400'>Loading...</p>
+          ) : categories.map(item => (
+            <label key={item._id} className='flex gap-2 text-sm text-gray-700 mb-1 cursor-pointer'>
               <input
-                type="checkbox"
+                type='checkbox'
                 value={item._id}
-                className="w-3"
+                className='w-3'
                 onChange={toggleCategory}
+                checked={category.includes(item._id)}
               />
               {item.name}
             </label>
@@ -136,18 +133,15 @@ const Collections = () => {
         </div>
 
         {/* SubCategory Filter */}
-        <div className={`border border-gray-300 pl-5 py-3 mt-6 my-5 ${
-          showFilter ? 'block' : 'hidden'
-        } sm:block`}>
-          <p className="mb-2 font-medium">Types</p>
-
+        <div className={`border border-gray-300 pl-5 py-3 mt-6 my-5 ${showFilter ? 'block' : 'hidden'} sm:block`}>
+          <p className='mb-2 font-medium'>Types</p>
           {filteredSubCategories.length > 0 ? (
             filteredSubCategories.map(item => (
-              <label key={item._id} className="flex gap-2 text-sm text-gray-700">
+              <label key={item._id} className='flex gap-2 text-sm text-gray-700 mb-1 cursor-pointer'>
                 <input
-                  type="checkbox"
+                  type='checkbox'
                   value={item._id}
-                  className="w-3"
+                  className='w-3'
                   onChange={toggleSubCategory}
                   checked={subCategory.includes(item._id)}
                 />
@@ -155,51 +149,73 @@ const Collections = () => {
               </label>
             ))
           ) : (
-            <p className="text-sm text-gray-400">
-              {category.length > 0 
-                ? "No subcategories for selected category" 
-                : "Select a category first"}
+            <p className='text-sm text-gray-400'>
+              {category.length > 0 ? 'No types for selected category' : 'Select a category first'}
             </p>
           )}
         </div>
 
+        {hasActiveFilters && (
+          <button
+            onClick={clearFilters}
+            className={`text-xs text-red-500 hover:underline sm:hidden block mt-2 ${showFilter ? 'block' : 'hidden'}`}
+          >
+            Clear all filters
+          </button>
+        )}
       </div>
 
       {/* Products Section */}
-      <div className="flex-1">
-
-        <div className="flex justify-between text-base sm:text-2xl mb-4">
-          <Title text1="ALL" text2="COLLECTIONS" />
-
+      <div className='flex-1'>
+        <div className='flex justify-between text-base sm:text-2xl mb-4'>
+          <Title text1='ALL' text2='COLLECTIONS' />
           <select
             value={sortType}
-            onChange={(e) => setSortType(e.target.value)}
-            className="border-2 border-gray-300 text-sm px-2"
+            onChange={e => setSortType(e.target.value)}
+            className='border-2 border-gray-300 text-sm px-2'
+            aria-label='Sort products'
           >
-            <option value="relevant">Sort by : Relevant</option>
-            <option value="low-high">Sort by : Low to High</option>
-            <option value="high-low">Sort by : High to Low</option>
+            <option value='relevant'>Sort by: Relevant</option>
+            <option value='low-high'>Sort by: Price Low → High</option>
+            <option value='high-low'>Sort by: Price High → Low</option>
           </select>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 gap-y-6">
-          {filterProducts.length > 0 ? (
-            filterProducts.map((item, index) => (
+        <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 gap-y-6'>
+          {loading ? (
+            [...Array(8)].map((_, i) => (
+              <div key={i} className='animate-pulse'>
+                <div className='bg-gray-200 aspect-square rounded-sm mb-2' />
+                <div className='h-3 bg-gray-200 rounded w-3/4 mb-1' />
+                <div className='h-3 bg-gray-200 rounded w-1/2' />
+              </div>
+            ))
+          ) : filterProducts.length > 0 ? (
+            filterProducts.map(item => (
               <ProductItem
-                key={index}
+                key={item._id}
                 id={item._id}
                 name={item.name}
                 image={item.image}
                 price={item.price}
+                stock={item.stock}
               />
             ))
           ) : (
-            <p className="col-span-full text-center text-gray-500">
-              No products found
-            </p>
+            <div className='col-span-full flex flex-col items-center py-16 gap-3 text-gray-400'>
+              <svg xmlns='http://www.w3.org/2000/svg' className='w-12 h-12' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
+                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={1} d='M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 18a7.5 7.5 0 006.15-3.35z' />
+              </svg>
+              <p className='text-lg font-medium text-gray-600'>No products found</p>
+              <p className='text-sm'>Try adjusting your filters or search term</p>
+              {hasActiveFilters && (
+                <button onClick={clearFilters} className='mt-2 bg-black text-white px-6 py-2 text-sm hover:bg-gray-800 transition-colors'>
+                  Clear Filters
+                </button>
+              )}
+            </div>
           )}
         </div>
-
       </div>
     </div>
   )

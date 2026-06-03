@@ -1,59 +1,70 @@
 import userModel from "../models/userModel.js";
 import bcrypt from "bcrypt";
 
-// Get user profile
-const getUserProfile = async (req, res) => {
+// GET user profile — called via POST /api/profile/get (authUser sets req.body.userId)
+const getUserProfile = async (req, res, next) => {
     try {
-        const { userId } = req.body;
-        
-        const user = await userModel.findById(userId).select('-password -cartData');
-        
+        const userId = req.userId || req.body.userId;
+
+        const user = await userModel.findById(userId).select("-password -cartData");
+
         if (!user) {
-            return res.status(404).json({ success: false, message: "User not found" });
+            return res.status(404).json({ success: false, message: "User not found." });
         }
-        
+
         res.json({ success: true, user });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 };
 
-// Update user profile
-const updateUserProfile = async (req, res) => {
+// POST /api/profile/update — Update user name and/or password
+const updateUserProfile = async (req, res, next) => {
     try {
-        const { userId, name, currentPassword, newPassword } = req.body;
-        
-        // Get user with password for verification
-        const user = await userModel.findById(userId);
-        
+        const userId = req.userId || req.body.userId;
+        const { name, currentPassword, newPassword } = req.body;
+
+        // ✅ CRITICAL: Must use .select('+password') — password field has select:false
+        // Without this, user.password is undefined and bcrypt.compare always returns false
+        const user = await userModel.findById(userId).select('+password');
         if (!user) {
-            return res.status(404).json({ success: false, message: "User not found" });
+            return res.status(404).json({ success: false, message: "User not found." });
         }
-        
-        // Verify current password
+
+        // Current password is always required for profile updates
+        if (!currentPassword) {
+            return res.status(400).json({ success: false, message: "Current password is required." });
+        }
+
         const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
         if (!isPasswordValid) {
-            return res.status(401).json({ success: false, message: "Current password is incorrect" });
+            return res.status(401).json({ success: false, message: "Current password is incorrect." });
         }
-        
+
         // Update name if provided
-        if (name && name.trim() !== '') {
+        if (name && name.trim() !== "") {
             user.name = name.trim();
         }
-        
-        // Update password if new password provided
-        if (newPassword && newPassword.trim() !== '') {
-            const salt = await bcrypt.genSalt(10);
+
+        // Validate and update password if new password provided
+        if (newPassword && newPassword.trim() !== "") {
+            if (newPassword.length < 8) {
+                return res.status(400).json({ success: false, message: "New password must be at least 8 characters." });
+            }
+            if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(newPassword)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "New password must contain uppercase, lowercase, a number, and a special character.",
+                });
+            }
+            const salt = await bcrypt.genSalt(12);
             user.password = await bcrypt.hash(newPassword, salt);
         }
-        
+
         await user.save();
-        
-        res.json({ success: true, message: "Profile updated successfully" });
+        res.json({ success: true, message: "Profile updated successfully." });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ success: false, message: error.message });
+        next(error);
     }
 };
 
