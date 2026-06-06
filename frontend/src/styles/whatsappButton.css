@@ -1,0 +1,242 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   WHATSAPP FLOATING BUTTON — Complete Styles
+   All classes prefixed with .wa- to avoid conflicts
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Keyframes ────────────────────────────────────────────────────────────────── */
+@keyframes wa-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.5), 0 4px 20px rgba(37,211,102,0.4); }
+    70%  { box-shadow: 0 0 0 14px rgba(37, 211, 102, 0), 0 4px 20px rgba(37,211,102,0.3); }
+    100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0), 0 4px 20px rgba(37,211,102,0.4); }
+}
+@keyframes wa-enter {
+    from { opacity: 0; transform: translateY(20px) scale(0.85); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes wa-click {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(0.88); }
+    100% { transform: scale(1); }
+}
+@keyframes wa-lock-wobble {
+    0%, 100% { transform: rotate(0deg); }
+    25%       { transform: rotate(-12deg); }
+    75%       { transform: rotate(12deg); }
+}
+@keyframes wa-proactive-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes wa-tooltip-in {
+    from { opacity: 0; transform: translateX(8px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes wa-badge-bounce {
+    0%   { transform: scale(0); }
+    60%  { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* ── Outer wrapper: positions button at bottom:24px right:24px ─────────────────
+   This is a SIBLING to .dice-float-wrap (chatbot at bottom:96px).
+   Both are fixed, same right: 24px, different bottom values.
+   ──────────────────────────────────────────────────────────────────────────────── */
+.wa-float-outer {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9997; /* below chatbot (9998) and chat window (9999) */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+/* ── Main button ─────────────────────────────────────────────────────────────── */
+.wa-float-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.2s ease,
+                opacity 0.3s ease,
+                background 0.4s ease;
+    animation: wa-enter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ── STATE 1: Logged-in (fully enabled, WhatsApp green) ─────────────────────── */
+.wa-float-btn--enabled {
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+    box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4),
+                0 2px 8px rgba(0, 0, 0, 0.15);
+    animation: wa-enter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+               wa-pulse 2.5s ease-in-out 1s infinite;
+    opacity: 1;
+}
+.wa-float-btn--enabled:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 28px rgba(37, 211, 102, 0.55),
+                0 4px 12px rgba(0, 0, 0, 0.2);
+}
+.wa-float-btn--enabled:active {
+    transform: scale(0.95);
+}
+
+/* ── STATE 2: Guest (locked, muted grey) ────────────────────────────────────── */
+.wa-float-btn--locked {
+    background: linear-gradient(135deg, #9CA3AF 0%, #6B7280 100%);
+    box-shadow: 0 4px 16px rgba(107, 114, 128, 0.3),
+                0 2px 8px rgba(0, 0, 0, 0.12);
+    opacity: 0.82;
+    /* No pulse animation — button is locked */
+}
+.wa-float-btn--locked:hover {
+    opacity: 0.95;
+    transform: scale(1.04);
+}
+.wa-float-btn--locked:hover .wa-lock-badge {
+    animation: wa-lock-wobble 0.5s ease;
+}
+
+/* ── Click animation ─────────────────────────────────────────────────────────── */
+.wa-float-btn--animating {
+    animation: wa-click 0.3s ease !important;
+}
+
+/* ── Icon wrapper ────────────────────────────────────────────────────────────── */
+.wa-icon-wrap { display: flex; align-items: center; justify-content: center; }
+.wa-icon-wrap--muted svg { opacity: 0.65; }
+
+/* ── Lock badge (bottom-right corner of button) ─────────────────────────────── */
+.wa-lock-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #374151;
+    border: 1.5px solid #d1d5db;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    flex-shrink: 0;
+}
+
+/* ── Tooltip ─────────────────────────────────────────────────────────────────── */
+.wa-tooltip {
+    position: absolute;
+    right: 66px; /* button width(56px) + 10px gap */
+    bottom: 8px;
+    background: #1F2937;
+    color: #fff;
+    border-radius: 8px;
+    padding: 10px 14px;
+    min-width: 200px;
+    max-width: 240px;
+    z-index: 10000;
+    animation: wa-tooltip-in 0.2s ease;
+    pointer-events: none;
+    white-space: nowrap;
+}
+.wa-tooltip__title {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    color: #fff;
+}
+.wa-tooltip__sub {
+    font-size: 11.5px;
+    color: rgba(255,255,255,0.72);
+    margin: 0;
+}
+/* Arrow pointing RIGHT toward the button */
+.wa-tooltip__arrow {
+    position: absolute;
+    right: -7px;
+    bottom: 14px;
+    width: 0;
+    height: 0;
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    border-left: 7px solid #1F2937;
+}
+
+/* ── Proactive bubble ────────────────────────────────────────────────────────── */
+.wa-proactive {
+    position: absolute;
+    bottom: 66px; /* button height + gap */
+    right: 0;
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px 12px 0 12px; /* chat bubble pointing down-right */
+    padding: 12px 32px 12px 14px;
+    max-width: 220px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    animation: wa-proactive-in 0.35s ease;
+}
+.wa-proactive__text {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1a1a1a;
+    margin: 0;
+    line-height: 1.45;
+}
+.wa-proactive__close {
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #9CA3AF;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.15s;
+}
+.wa-proactive__close:hover { color: #374151; }
+
+/* ── Mobile ──────────────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+    .wa-float-outer {
+        bottom: 16px;
+        right: 16px;
+    }
+    .wa-tooltip {
+        right: 62px;
+        min-width: 170px;
+        max-width: 200px;
+    }
+    .wa-proactive {
+        max-width: 190px;
+    }
+}
+
+/* ── Focus visible ───────────────────────────────────────────────────────────── */
+.wa-float-btn:focus-visible {
+    outline: 3px solid #25D366;
+    outline-offset: 3px;
+}
+.wa-float-btn--locked:focus-visible {
+    outline-color: #6B7280;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .wa-float-btn,
+    .wa-float-btn--enabled { animation: none; }
+    .wa-float-btn { transition: opacity 0.2s; }
+    .wa-proactive, .wa-tooltip { animation: none; }
+}

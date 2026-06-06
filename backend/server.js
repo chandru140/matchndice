@@ -17,6 +17,7 @@ import errorHandler from "./middleware/errorMiddleware.js";
 import notifyMeRouter from "./routes/notifyMeRoute.js";
 import reviewRouter from "./routes/reviewRoutes.js";
 import whatsAppRouter from "./routes/whatsAppRoute.js";
+import chatbotRouter from "./routes/chatbotRoutes.js";
 
 // ─── App Config ───────────────────────────────────────────────────────────────
 const app = express();
@@ -77,9 +78,9 @@ app.use(
 );
 
 // ─── Body Parsing ─────────────────────────────────────────────────────────────
-// Global limit: 1mb (reasonable for product images via base64, etc.)
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+// 5mb limit to support base64 image uploads in chatbot (inspiration images)
+app.use(express.json({ limit: "5mb" }));
+app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
@@ -107,6 +108,7 @@ app.use("/api/order", orderRouter);
 app.use("/api/notify-me", notifyMeRouter);
 app.use("/api/reviews", reviewRouter);
 app.use("/api/whatsapp-inquiry", whatsAppRouter);
+app.use("/api/chatbot", chatbotRouter);
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((req, res) => {

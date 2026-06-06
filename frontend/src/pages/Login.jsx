@@ -40,6 +40,7 @@ const validateSignupPassword = (value) => {
 // ── Context-aware banner ──────────────────────────────────────────────────────
 const REASON_MESSAGES = {
     whatsapp_customize: { icon: '💬', text: 'Login to customize your product via WhatsApp' },
+    whatsapp_chat:      { icon: '💬', text: 'Login to chat with Match n Dice on WhatsApp. Our team is ready to help you with personalization and orders!' },
     write_review:       { icon: '⭐', text: 'Login to write a review for your purchase' },
     checkout:           { icon: '🛒', text: 'Login to complete your checkout' },
     default:            { icon: '🔐', text: 'Login to continue' },
@@ -271,6 +272,17 @@ const Login = () => {
                 // ✅ Store token in memory (via context), NOT localStorage
                 // This prevents XSS-based token theft
                 setToken(response.data.token)
+
+                // Cache minimal user info for WhatsApp message builder
+                // (JWT only contains userId, not name/email)
+                try {
+                    const u = response.data.user || {}
+                    sessionStorage.setItem('wa_user_profile', JSON.stringify({
+                        name:  u.name  || name.trim() || '',
+                        email: u.email || email.trim().toLowerCase() || '',
+                        phone: u.phone || '',
+                    }))
+                } catch {}
 
                 if (mode === 'Sign Up') {
                     toast.success('Account created! Welcome to Match n Dice 🎁')
